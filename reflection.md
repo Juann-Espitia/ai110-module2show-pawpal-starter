@@ -5,7 +5,10 @@
 **a. Initial design**
 
 - Briefly describe your initial UML design.
+I want to have a section where users can enter their information and pet information. A section where they can see the tasks for the day/week, whether it be walking, feeding, medicine, etc.
+A section where they can implement constraints and priorities.
 - What classes did you include, and what responsibilities did you assign to each?
+I want 3 or so classes, one for pet owner, one for pet, and one for tasks.
 
 **b. Design changes**
 
