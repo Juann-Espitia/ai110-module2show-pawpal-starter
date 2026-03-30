@@ -41,6 +41,29 @@ PawPal+ goes beyond a simple task list with four algorithmic features:
 - **Recurring tasks** — `CareTask` supports a `frequency` field (`once` / `daily` / `weekly`). When `DayScheduler.complete_task()` marks a task done, it calls `next_occurrence()` which uses Python's `timedelta` to calculate the next due date and automatically appends a fresh copy of the task.
 - **Conflict detection** — `DayScheduler.detect_conflicts()` compares every pair of scheduled tasks to check whether their time windows overlap. It returns human-readable warning strings instead of crashing, so the owner can decide how to resolve them.
 
+## Testing PawPal+
+
+Run the full test suite from the project root:
+
+```bash
+python -m pytest test_pawpal.py -v
+```
+
+The suite contains **36 tests** organized into 7 groups:
+
+| Group | What is tested |
+|---|---|
+| Task status | Default `pending` state, `mark_complete()`, idempotency |
+| Recurrence | `once` returns `None`, `daily` adds +1 day, `weekly` adds +7 days, fields preserved |
+| Task count | Add, remove, remove non-existent task |
+| `build_schedule` | Times assigned, priority ordering, tasks that exceed window are unscheduled |
+| `sort_by_time` | Chronological order, unscheduled tasks excluded, empty scheduler |
+| `filter_tasks` | Filter by status, by category, combined filters, no-match returns empty list |
+| Conflict detection | No overlap, exact same time, partial overlap, back-to-back (not a conflict), unscheduled tasks ignored, warning contains task names |
+
+**Confidence level: ★★★★☆**
+The core scheduling behaviors (priority ordering, time assignment, recurrence, conflict detection) are all covered with both happy-path and edge-case tests. The one gap is UI-level integration — the Streamlit session-state flow is not tested automatically, so manual verification of the app is still needed.
+
 ### Suggested workflow
 
 1. Read the scenario carefully and identify requirements and edge cases.

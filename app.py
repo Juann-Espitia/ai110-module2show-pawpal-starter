@@ -120,8 +120,64 @@ else:
 
     if st.session_state.schedule_output:
         st.code(st.session_state.schedule_output, language=None)
+
+        conflicts = st.session_state.scheduler.detect_conflicts()
+        if conflicts:
+            for warning in conflicts:
+                st.warning(warning)
+
         if st.session_state.unscheduled:
             st.warning(
                 "These tasks didn't fit in the available window: "
                 + ", ".join(t.title for t in st.session_state.unscheduled)
             )
+
+st.divider()
+
+# ── 4. Filter & Sort ──────────────────────────────────────────────────────────
+st.header("4. Filter & Sort Tasks")
+
+if st.session_state.scheduler is None:
+    st.info("Save owner & pet info first.")
+elif not st.session_state.scheduler.tasks:
+    st.info("Add at least one task to use filters.")
+else:
+    col1, col2 = st.columns(2)
+    with col1:
+        status_filter = st.selectbox("Filter by status", ["all", "pending", "complete"])
+    with col2:
+        category_filter = st.selectbox(
+            "Filter by category",
+            ["all", "feeding", "walk", "medication", "grooming", "enrichment", "general"],
+        )
+
+    sort_by = st.radio("Sort by", ["time", "priority"], horizontal=True)
+
+    s = st.session_state.scheduler
+    filtered = s.filter_tasks(
+        status=None if status_filter == "all" else status_filter,
+        category=None if category_filter == "all" else category_filter,
+    )
+
+    if sort_by == "time":
+        # keep only tasks that have a scheduled time, sorted chronologically
+        filtered = sorted(
+            [t for t in filtered if t.scheduled_time],
+            key=lambda t: t.scheduled_time or "",
+        )
+    else:
+        filtered = sorted(filtered, key=lambda t: t.priority_value, reverse=True)
+
+    if filtered:
+        st.table([
+            {
+                "Time": t.scheduled_time or "—",
+                "Title": t.title,
+                "Priority": t.priority,
+                "Category": t.category,
+                "Status": t.status,
+            }
+            for t in filtered
+        ])
+    else:
+        st.info("No tasks match the selected filters.")
