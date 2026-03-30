@@ -1,4 +1,4 @@
-# PawPal+ Class Diagram
+# PawPal+ Final Class Diagram
 
 ```mermaid
 classDiagram
@@ -28,7 +28,12 @@ classDiagram
         +str category
         +str notes
         +str scheduled_time
+        +str status
+        +str frequency
+        +str due_date
         +priority_value() int
+        +mark_complete() None
+        +next_occurrence() CareTask
         +schedule_at(time_str) None
         +__str__() str
     }
@@ -41,10 +46,15 @@ classDiagram
         +build_schedule() list~CareTask~
         +view_day() str
         +unscheduled_tasks() list~CareTask~
+        +sort_by_time() list~CareTask~
+        +filter_tasks(status, category) list~CareTask~
+        +complete_task(title) CareTask
+        +detect_conflicts() list~str~
     }
 
     Owner "1" --> "1..*" Pet : owns
     Pet "1" --> "1" Owner : belongs to
     DayScheduler "1" --> "1" Pet : schedules for
     DayScheduler "1" o-- "0..*" CareTask : manages
+    CareTask ..> CareTask : next_occurrence()
 ```
