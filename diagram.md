@@ -1,60 +1,30 @@
-# PawPal+ Final Class Diagram
+# PawPal+ Applied AI System Diagram
 
 ```mermaid
-classDiagram
-    class Owner {
-        +str name
-        +str available_start
-        +str available_end
-        +str preferred_walk_time
-        +available_minutes() int
-        +__str__() str
-    }
-
-    class Pet {
-        +str name
-        +str species
-        +str breed
-        +float age_years
-        +Owner owner
-        +needs_walk() bool
-        +__str__() str
-    }
-
-    class CareTask {
-        +str title
-        +int duration_minutes
-        +str priority
-        +str category
-        +str notes
-        +str scheduled_time
-        +str status
-        +str frequency
-        +str due_date
-        +priority_value() int
-        +mark_complete() None
-        +next_occurrence() CareTask
-        +schedule_at(time_str) None
-        +__str__() str
-    }
-
-    class DayScheduler {
-        +Pet pet
-        +list~CareTask~ tasks
-        +add_task(task) None
-        +remove_task(title) bool
-        +build_schedule() list~CareTask~
-        +view_day() str
-        +unscheduled_tasks() list~CareTask~
-        +sort_by_time() list~CareTask~
-        +filter_tasks(status, category) list~CareTask~
-        +complete_task(title) CareTask
-        +detect_conflicts() list~str~
-    }
-
-    Owner "1" --> "1..*" Pet : owns
-    Pet "1" --> "1" Owner : belongs to
-    DayScheduler "1" --> "1" Pet : schedules for
-    DayScheduler "1" o-- "0..*" CareTask : manages
-    CareTask ..> CareTask : next_occurrence()
+flowchart TD
+    A["Owner input<br/>pet profile, tasks, question"] --> B["Streamlit application"]
+    B --> C["DayScheduler<br/>task priority, recurrence, conflicts"]
+    B --> D["LocalKnowledgeBase<br/>markdown pet-care notes"]
+    D --> E["Retriever<br/>keyword overlap ranking"]
+    B --> F["Safety assessment<br/>routine, caution, emergency"]
+    C --> G["Live planner context"]
+    E --> H["Retrieved evidence"]
+    F --> I["Response layer"]
+    G --> I
+    H --> I
+    I --> J["OpenAI synthesis when key exists"]
+    I --> K["Local grounded fallback"]
+    J --> L["Final answer"]
+    K --> L
+    L --> M["Confidence score + cited sources"]
+    L --> N["JSONL interaction log"]
+    O["Automated tests and evaluation script"] --> N
+    O --> M
 ```
+
+## Architecture Notes
+
+- The original scheduling engine remains the core product workflow.
+- Retrieval is local and deterministic, which makes testing and explanation easier.
+- Safety assessment sits in front of generation so high-risk questions can be escalated before the assistant tries to sound helpful.
+- The response layer can use OpenAI for better phrasing, but the system still runs without an API key.

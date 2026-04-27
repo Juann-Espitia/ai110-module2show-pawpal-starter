@@ -1,9 +1,17 @@
+from pathlib import Path
+
 import streamlit as st
+
+from pawpal_ai import LocalKnowledgeBase, PawPalAssistant
 from pawpal_system import Owner, Pet, CareTask, DayScheduler
 
 st.set_page_config(page_title="PawPal+", page_icon="🐾", layout="centered")
 st.title("🐾 PawPal+")
-st.caption("A smart daily care planner for your pet.")
+st.caption("A planning and retrieval-assisted pet-care system with safety guardrails.")
+
+BASE_DIR = Path(__file__).parent
+KNOWLEDGE_DIR = BASE_DIR / "knowledge_base"
+LOG_DIR = BASE_DIR / "logs"
 
 # ── Session state init ────────────────────────────────────────────────────────
 if "scheduler" not in st.session_state:
@@ -12,6 +20,11 @@ if "schedule_output" not in st.session_state:
     st.session_state.schedule_output = None
 if "unscheduled" not in st.session_state:
     st.session_state.unscheduled = []
+if "assistant" not in st.session_state:
+    knowledge_base = LocalKnowledgeBase.from_directory(KNOWLEDGE_DIR)
+    st.session_state.assistant = PawPalAssistant(knowledge_base=knowledge_base, log_dir=LOG_DIR)
+if "ai_result" not in st.session_state:
+    st.session_state.ai_result = None
 
 # ── 1. Owner & Pet Info ───────────────────────────────────────────────────────
 st.header("1. Owner & Pet Info")
@@ -42,6 +55,7 @@ if st.button("Save Owner & Pet", type="primary"):
     st.session_state.scheduler = DayScheduler(pet=pet)
     st.session_state.schedule_output = None
     st.session_state.unscheduled = []
+    st.session_state.ai_result = None
     st.success(
         f"Saved {pet_name} ({breed}, {species}) for {owner_name}. "
         f"Available window: {available_start}–{available_end} "
@@ -90,6 +104,7 @@ else:
             )
             st.session_state.scheduler.add_task(task)
             st.session_state.schedule_output = None
+            st.session_state.ai_result = None
             st.success(f"Added: **{task_title}** ({priority} priority, {frequency})")
 
     with st.expander("Remove or complete a task"):
@@ -100,6 +115,7 @@ else:
                 removed = st.session_state.scheduler.remove_task(remove_title)
                 if removed:
                     st.session_state.schedule_output = None
+                    st.session_state.ai_result = None
                     st.success(f"Removed: {remove_title}")
                 else:
                     st.warning(f"No task named '{remove_title}' found.")
@@ -109,6 +125,7 @@ else:
             if st.button("Mark complete"):
                 next_task = st.session_state.scheduler.complete_task(complete_title)
                 if next_task:
+                    st.session_state.ai_result = None
                     st.success(
                         f"Done! Next recurrence scheduled for **{next_task.due_date}**."
                     )
@@ -119,6 +136,7 @@ else:
                         for t in st.session_state.scheduler.tasks
                     )
                     if found:
+                        st.session_state.ai_result = None
                         st.success(f"Marked '{complete_title}' as complete.")
                     else:
                         st.warning(f"No task named '{complete_title}' found.")
@@ -190,8 +208,63 @@ else:
 
 st.divider()
 
-# ── 4. Filter & Sort ──────────────────────────────────────────────────────────
-st.header("4. Filter & Sort Tasks")
+# ── 4. Ask PawPal+ ────────────────────────────────────────────────────────────
+st.header("4. Ask PawPal+")
+
+question = st.text_area(
+    "Ask a care question",
+    value="How can I keep Mochi on track with feeding, medication, and exercise this week?",
+    height=110,
+)
+
+if st.button("Run retrieval-assisted advice", type="primary"):
+    if st.session_state.scheduler is None:
+        st.warning("Complete Step 1 first so PawPal+ has pet context.")
+    elif not question.strip():
+        st.warning("Enter a question first.")
+    else:
+        st.session_state.ai_result = st.session_state.assistant.answer_question(
+            question.strip(),
+            scheduler=st.session_state.scheduler,
+        )
+
+if st.session_state.ai_result is not None:
+    result = st.session_state.ai_result
+    if result.safety.level == "emergency":
+        st.error(result.answer)
+    elif result.safety.level == "caution":
+        st.warning(result.answer)
+    else:
+        st.success(result.answer)
+
+    metric_col1, metric_col2, metric_col3 = st.columns(3)
+    metric_col1.metric("Confidence", f"{int(result.confidence * 100)}%")
+    metric_col2.metric("Safety level", result.safety.level.title())
+    metric_col3.metric("Generation mode", result.used_model)
+
+    st.caption(result.safety.reason)
+    st.caption(f"Interaction log: {result.log_path}")
+
+    if result.retrieved:
+        st.subheader("Retrieved Knowledge")
+        st.table(
+            [
+                {
+                    "Title": item.document.title,
+                    "Source": item.document.source,
+                    "Score": item.score,
+                    "Matched terms": ", ".join(item.matched_terms[:5]),
+                }
+                for item in result.retrieved
+            ]
+        )
+    else:
+        st.info("No strong document match was found, so PawPal+ stayed conservative.")
+
+st.divider()
+
+# ── 5. Filter & Sort ──────────────────────────────────────────────────────────
+st.header("5. Filter & Sort Tasks")
 
 if st.session_state.scheduler is None:
     st.info("Complete Step 1 first.")

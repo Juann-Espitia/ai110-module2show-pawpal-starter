@@ -1,3 +1,4 @@
+from pawpal_ai import LocalKnowledgeBase, PawPalAssistant
 from pawpal_system import Owner, Pet, CareTask, DayScheduler
 
 SEP = "=" * 55
@@ -112,3 +113,29 @@ conflicts = luna_scheduler.detect_conflicts()
 if conflicts:
     for warning in conflicts:
         print(f"  WARNING: {warning}")
+
+# ── Step 7: Retrieval-assisted AI guidance ───────────────────────────────────
+print(f"\n{SEP}")
+print("PAWPAL+ AI ADVISOR")
+print(SEP)
+
+knowledge_base = LocalKnowledgeBase.from_directory("knowledge_base")
+assistant = PawPalAssistant(knowledge_base=knowledge_base, log_dir="logs")
+
+questions = [
+    "How can I keep Mochi consistent with feeding and exercise on busy days?",
+    "My dog skipped a meal and has diarrhea. What should I do next?",
+    "My dog ate chocolate and is shaking. Is this an emergency?",
+]
+
+for question in questions:
+    result = assistant.answer_question(question, scheduler=mochi_scheduler)
+    print(f"\nQ: {question}")
+    print(f"Safety: {result.safety.level}")
+    print(f"Confidence: {result.confidence}")
+    print(f"Mode: {result.used_model}")
+    print("Sources:")
+    for item in result.retrieved:
+        print(f"  - {item.document.title} ({item.score})")
+    print("Answer:")
+    print(result.answer)
